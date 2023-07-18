@@ -1,0 +1,9 @@
+[{
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "help.events.city",
+      "sha256_cert_fingerprints":
+      ["76:88:BB:8B:CC:1F:9C:2C:41:A8:19:86:71:69:B7:1F:16:6E:CB:EF:9E:5B:F7:84:1D:38:13:D6:7A:EE:84:81"]
+    }
+  }]

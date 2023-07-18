@@ -1,0 +1,5 @@
+git_url("ssh://git@gitlab.introduct.dev:7044/flutter/pssn-match.git")
+
+storage_mode("git")
+
+type("development")

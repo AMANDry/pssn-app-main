@@ -1,0 +1,82 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VSCode related
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+**/*.freezed.dart
+**/*.g.dart
+**/*.gr.dart
+**/*.gen.dart
+.fvm
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Sensitive data
+google-services.json
+GoogleService-Info.plist
+# Keystore for development
+debug-keystore.jks
+firebase_options.dart
+# General app config
+dev_config.json
+staging_config.json
+production_config.json
+# Fastlane service agent key for Play Console 
+play-console-key.json
+# Fastlane service agent key for Firebase App Distribution
+firebase-app-distribution-key.json
+# Fastlane App Store Connect API key
+app_store_connect_key.p8
+# Fastlane GitHub Deployment key for Match
+github_deploy_key
+
+# Assets dev and staging icons (generate automatically)
+assets/images/*_dev.png
+assets/images/*_staging.png
+
+DartDefine.xcconfig
+*.DS_Store
+
+# Web related
+lib/generated_plugin_registrant.dart
+
+# Mason related
+.mason/bricks.json
+mason-lock.json
+
+

@@ -1,0 +1,11 @@
+{
+  "applinks": {
+      "apps": [],
+      "details": [
+      {
+        "appID": "C726275S95.help.events.city",
+        "paths": ["*"]
+      }
+    ]
+  }
+}

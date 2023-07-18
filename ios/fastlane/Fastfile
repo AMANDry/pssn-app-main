@@ -1,0 +1,110 @@
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+  team_id = "C726275S95"
+  path_to_ipa = "../build/ios/ipa/Runner.ipa"
+  ipa_output_directory = "../build/ios/ipa"
+  path_to_archive = "../build/ios/archive/Runner.xcarchive"
+  path_to_match_deploy_key = "Runner/github_deploy_key"
+  # Environment specific app config
+  path_to_app_config = "lib/common/helpers/config/dev_config.json"
+  #---------------------------------------------------------------------------
+  desc "Submit a new build to Firebase App Distribution"
+  lane :deploy_to_firebase do
+  
+    firebase_app_id = "1:870130822992:ios:4aa4fcebd9bbdeece50655"
+    path_to_firebase_service_account = "Runner/firebase-app-distribution-key.json"
+
+    # Get last build number from Firebase App Distribution
+    latest_release = firebase_app_distribution_get_latest_release(
+      app: firebase_app_id,
+      service_credentials_file: path_to_firebase_service_account,
+      )
+    previous_build_number = latest_release.nil? ? 0 : latest_release[:buildVersion].to_i
+    new_build_number = previous_build_number + 1;  
+    
+    # Clean project
+    sh "flutter clean"
+    sh "flutter pub get"
+    sh "flutter pub run build_runner build --delete-conflicting-outputs"
+    # Change app icon according to the environment 
+    sh "brew install imagemagick"
+    Dir.chdir("../..") do
+      sh "convert assets/images/icon_android.png -undercolor Red -pointsize 75 -fill white  -gravity Center -annotate 0 'DE' assets/images/icon_android_dev.png"
+      sh "convert assets/images/icon_ios.png -undercolor Red -pointsize 75 -fill white  -gravity Center -annotate 0 'DE' assets/images/icon_ios_dev.png"
+      sh "convert assets/images/icon_web.png -undercolor Red -pointsize 75 -fill white  -gravity Center -annotate 0 'DE' assets/images/icon_web_dev.png"
+    end
+    sh "flutter pub run flutter_launcher_icons -f lib/common/helpers/config/flutter_launcher_icons_dev.yaml"
+    
+    # Make flutter build with dart defines without signing the archive
+    sh "flutter build ipa --build-number #{new_build_number} --no-codesign --dart-define-from-file=#{path_to_app_config}"
+    
+    # Sign an archive with Match
+    distribution_type = "adhoc"
+    sync_code_signing(type: distribution_type, git_private_key: path_to_match_deploy_key)
+    
+    # Create an IPA from signed archive
+    output_directory = "../build/ios/ipa"
+    path_to_archive = "../build/ios/archive/Runner.xcarchive"
+    build_app(
+      export_team_id: team_id,
+      skip_build_archive: true,
+      archive_path: path_to_archive,
+      output_directory: ipa_output_directory,
+      )
+    
+    firebase_app_distribution(
+      app: firebase_app_id,
+      ipa_path: path_to_ipa,
+      service_credentials_file: path_to_firebase_service_account,
+      )
+  end
+
+  #---------------------------------------------------------------------------
+  desc "Push a new release build to Test Flight"
+  lane :deploy_to_testflight do
+    key_id = "G3PRS39A3S"
+    key_issuer_id = "c20081ce-717c-494c-bbb6-3ea3881ad005"
+    path_to_app_store_connect_key = "Runner/app_store_connect_key.p8"
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: key_issuer_id,
+      key_filepath: path_to_app_store_connect_key,
+      duration: 1200,
+      in_house: false
+    )
+
+    # Get previous build number from Test Flight
+    previous_build_number = latest_testflight_build_number(
+      api_key: api_key,
+      app_identifier: "help.events.city",
+      )
+    new_build_number = previous_build_number + 1
+    
+    # Clean project
+    sh "flutter clean"
+    sh "flutter pub get"
+    sh "flutter pub run build_runner build --delete-conflicting-outputs"
+    sh "flutter pub run flutter_launcher_icons -f lib/common/helpers/config/flutter_launcher_icons.yaml"
+
+    # Make flutter build with dart defines without signing the archive
+    sh "flutter build ipa --build-number #{new_build_number} --no-codesign --dart-define-from-file=#{path_to_app_config}"
+    
+    # Sign an archive with Match
+    distribution_type = "appstore"
+    sync_code_signing(type: distribution_type, git_private_key: path_to_match_deploy_key)
+
+    # Create an IPA from signed archive
+    build_app(
+      export_team_id: team_id,
+      skip_build_archive: true,
+      archive_path: path_to_archive,
+      output_directory: ipa_output_directory,
+      )
+    
+    upload_to_testflight(ipa: path_to_ipa)
+  end
+end

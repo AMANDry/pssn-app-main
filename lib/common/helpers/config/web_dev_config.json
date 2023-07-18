@@ -1,0 +1,6 @@
+{
+    "APP_NAME": "PSSN DEV",
+    "APP_ENVIRONMENT": "DEV",
+    "APP_BASE_URL": "https://google.com",
+    "APP_VAPID_KEY": "BMfwWzaE4hvaK4n8e97qNlvg20xyHkVDfzmqHGZ8hhV3Kpoc3z06SU31wcd-e3mIxBbzmzk_Gr38YGMm3pln30Y"
+}

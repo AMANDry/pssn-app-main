@@ -1,0 +1,121 @@
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+platform :android do
+  # Environment specific app config
+  
+  path_to_app_config = "../lib/common/helpers/config/app_config.json"
+  app_config_json = read_json(
+    json_path: path_to_app_config
+  )
+  firebase_app_id = app_config_json[:FIREBASE_APP_ID_ANDROID]
+  path_to_firebase_service_account = app_config_json[:GOOGLE_CLOUD_SERVICE_CREDENTIALS_PATH]
+  #---------------------------------------------------------------------------
+  desc "Create a new APK build"
+  lane :build_apk do
+
+    # Get last build number from Firebase App Distribution
+    latest_release = firebase_app_distribution_get_latest_release(
+      app: firebase_app_id,
+      service_credentials_file: path_to_firebase_service_account,
+      )
+    previous_build_number =  latest_release.nil? ? 0 : latest_release[:buildVersion].to_i
+    new_build_number = previous_build_number + 1;
+    
+    # Clean project
+    sh "flutter clean"
+	  sh "flutter pub get"
+	  sh "flutter pub run build_runner build --delete-conflicting-outputs"
+    # Change app icon according to the environment 
+    sh "brew install imagemagick"
+    Dir.chdir("../..") do
+      sh "convert assets/images/icon_android.png -undercolor Red -pointsize 75 -fill white  -gravity Center -annotate 0 'D' assets/images/icon_android_dev.png"
+      sh "convert assets/images/icon_ios.png -undercolor Red -pointsize 75 -fill white  -gravity Center -annotate 0 'D' assets/images/icon_ios_dev.png"
+      sh "convert assets/images/icon_web.png -undercolor Red -pointsize 75 -fill white  -gravity Center -annotate 0 'D' assets/images/icon_web_dev.png"
+    end
+	  sh "flutter pub run flutter_launcher_icons -f lib/common/helpers/config/flutter_launcher_icons_dev.yaml"
+
+    # Make flutter build with dart defines
+    sh "flutter build apk --build-number #{new_build_number} --dart-define-from-file=#{path_to_app_config}" 
+  end
+
+
+  #---------------------------------------------------------------------------
+  # In order to keep consistent build number new build should be distributed to
+  # internal testing track and then promoted to any other (including production)
+  # First build should be deployed manually!
+  desc "Create a new AAB build"
+  lane :build_aab do
+    track = 'internal'
+    path_to_play_console_service_account = "app/play-console-key.json"
+    # Get last build number from Play Console internal track
+    previous_build_number = google_play_track_version_codes(
+      track: track,
+      package_name: "help.events.city",
+      json_key: path_to_play_console_service_account,
+      )[0]
+
+    new_build_number = previous_build_number + 1
+
+    # Clean project
+    sh "flutter clean"
+	  sh "flutter pub get"
+	  sh "flutter pub run build_runner build --delete-conflicting-outputs"
+    sh "flutter pub run flutter_launcher_icons -f lib/common/helpers/config/flutter_launcher_icons.yaml"
+    
+    # Make flutter build with dart defines
+    sh "flutter build appbundle --build-number #{new_build_number} --dart-define-from-file=#{path_to_app_config}" 
+
+    path_to_release_bundle = "../build/app/outputs/bundle/release/app-release.aab"
+  end
+
+
+  #---------------------------------------------------------------------------
+  desc "Submit a new build to Firebase App Distribution"
+  lane :deploy_to_firebase do
+
+  # It is not possible to upload AAB bundle for unpublished app
+  path_to_release_apk = "../build/app/outputs/apk/release/app-release.apk"
+  firebase_app_distribution(
+    app: firebase_app_id,
+    android_artifact_type: "APK",
+    android_artifact_path: path_to_release_apk,
+    service_credentials_file: path_to_firebase_service_account,
+    )
+  end
+
+
+  #---------------------------------------------------------------------------
+  # In order to keep consistent build number new build should be distributed to
+  # internal testing track and then promoted to any other (including production)
+  # First build should be deployed manually!
+  desc "Submit a new build to Google Play internal testing track"
+  lane :deploy_to_play_console do
+    track = 'internal'
+    path_to_play_console_service_account = "app/play-console-key.json"
+
+    path_to_release_bundle = "../build/app/outputs/bundle/release/app-release.aab"
+    upload_to_play_store(
+      track: track,
+      release_status: 'draft',
+      aab: path_to_release_bundle,
+      json_key: path_to_play_console_service_account,
+      )
+  end
+
+
+  #---------------------------------------------------------------------------
+  desc "Promote internal track build to production"
+  lane :promote_to_production do
+    upload_to_play_store(
+      track: 'internal',
+      release_status: 'draft',
+      skip_upload_changelogs: true,
+      track_promote_to: 'production',
+      json_key: path_to_play_console_service_account,
+      )
+  end
+
+end
